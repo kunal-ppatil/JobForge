@@ -1,0 +1,40 @@
+services:
+  python-adapter:
+    build:
+      context: .
+      dockerfile: adapters/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+      - PLAYWRIGHT_HEADLESS=true
+    volumes:
+      - ./job-apply-mcp:/app/job-apply-mcp
+      - ./adapters:/app/adapters
+
+  jobpilot-backend:
+    build:
+      context: ./jobpilot/backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - ADAPTER_BASE_URL=http://python-adapter:8001
+      - DATABASE_URL=file:./dev.db
+      - ENCRYPTION_SECRET=super_secret_32_character_encryption_key_for_jobpilot_app!
+    depends_on:
+      - python-adapter
+    volumes:
+      - ./jobpilot/backend/prisma:/app/prisma
+
+  jobpilot-frontend:
+    build:
+      context: ./jobpilot/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - BACKEND_URL=http://jobpilot-backend:3001
+    depends_on:
+      - jobpilot-backend
